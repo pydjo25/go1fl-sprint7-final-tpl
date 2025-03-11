@@ -15,7 +15,7 @@ var cafeList = map[string][]string{
 func mainHandle(w http.ResponseWriter, req *http.Request) {
 	var err error
 
-	// если count не указан, то возвращается 5 записей
+	// если count не указан, то возвращается 25 записей
 	count := 25
 	countStr := req.FormValue("count")
 	if countStr != "" {
