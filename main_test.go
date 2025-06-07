@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -96,9 +96,11 @@ func TestCafeCount(t *testing.T) {
 			convStr = strings.Split(bodyResp, ",")
 		}
 
+		require.Equal(t, http.StatusOK, resp.Code)
 		assert.Equal(t, v.want, len(convStr),
 			"For count=%d in %s: expected %d cafes, got %d. Response: '%s'",
 			v.count, v.city, v.want, len(convStr), bodyResp)
+
 	}
 
 }
@@ -143,7 +145,7 @@ func TestCafeSearch(t *testing.T) {
 				countResult++
 			}
 		}
-
+		require.Equal(t, http.StatusOK, resp.Code)
 		assert.Equal(t, v.wantcount, countResult,
 			"For search = %s in %s: expected %d cafes, got %d. Response: '%s'",
 			v.search, "city=moscow", v.wantcount, len(convStr), bodyResp)
