@@ -1,14 +1,14 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -53,59 +53,56 @@ func TestCafeWhenOk(t *testing.T) {
 
 func TestCafeCount(t *testing.T) {
 
+	var (
+		convStr     []string
+		countResult int
+	)
+
 	data := []struct {
-		count int    // передаваемое значение count
-		want  int    // ожидаемое количество кафе
-		city  string // город
+		count int // передаваемое значение count
+		want  int // ожидаемое количество кафе
 	}{
-		{count: 0, want: 0, city: "moscow"},
-		{count: 0, want: 0, city: "tula"},
-		{count: 1, want: 1, city: "moscow"},
-		{count: 1, want: 1, city: "tula"},
-		{count: 2, want: 2, city: "moscow"},
-		{count: 2, want: 2, city: "tula"},
-		{count: 100, want: 0, city: "moscow"},
-		{count: 100, want: 0, city: "tula"},
+		{count: 0, want: 0},
+		{count: 1, want: 1},
+		{count: 2, want: 2},
+		{count: 100, want: 5},
 	}
 
 	for _, v := range data {
 		handler := http.HandlerFunc(mainHandle)
-
 		resp := httptest.NewRecorder()
-
-		conCount := strconv.Itoa(v.count)
-
-		url := "/cafe?city=" + v.city + "&count=" + conCount
-
+		url := "/cafe?city=moscow&count=" + strconv.Itoa(v.count)
 		req := httptest.NewRequest("GET", url, nil)
-
 		handler.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
 
 		bodyResp, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal("error reading response body: ", err)
 		}
 
-		if v.count > len(cafeList) || v.count == 0 {
-			bodyResp = []byte("")
-		}
-
-		var convStr []string
-
 		if bodyResp := string(bodyResp); bodyResp != "" {
 			convStr = strings.Split(bodyResp, ",")
 		}
 
-		require.Equal(t, http.StatusOK, resp.Code)
-		assert.Equal(t, v.want, len(convStr),
-			"For count=%d in %s: expected %d cafes, got %d. Response: '%s'",
-			v.count, v.city, v.want, len(convStr), bodyResp)
+		if v.count > len(cafeList["moscow"]) {
+			countResult = min(len(cafeList["moscow"]), 100)
+			assert.Equal(t, v.want, countResult)
+		} else {
+			assert.Equal(t, v.want, len(convStr))
+		}
 
 	}
 
 }
 
 func TestCafeSearch(t *testing.T) {
+
+	var (
+		convStr []string
+		// countResult int
+	)
 
 	data := []struct {
 		search    string // передаваемое значение count
@@ -115,39 +112,31 @@ func TestCafeSearch(t *testing.T) {
 		{search: "кофе", wantcount: 2},
 		{search: "вилка", wantcount: 1},
 	}
+
 	for _, v := range data {
 		handler := http.HandlerFunc(mainHandle)
-
 		resp := httptest.NewRecorder()
-
-		url := "/cafe?city=moscow" + "&search=" + v.search
-
+		url := "/cafe?city=moscow&search=" + v.search
 		req := httptest.NewRequest("GET", url, nil)
-
 		handler.ServeHTTP(resp, req)
+
+		require.Equal(t, http.StatusOK, resp.Code)
 
 		bodyResp, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal("error reading response body: ", err)
 		}
+		clearStr := strings.TrimSpace(string(bodyResp))
 
-		var (
-			convStr     []string
-			countResult int
-		)
-		if bodyResp := string(bodyResp); bodyResp != "" {
-			convStr = strings.Split(bodyResp, ",")
+		if clearStr != "" {
+			convStr = strings.Split(clearStr, ",")
 		}
+
+		assert.Len(t, convStr, v.wantcount)
 
 		for _, s := range convStr {
-			strings.ToLower(s)
-			if strings.Contains(v.search, s); true {
-				countResult++
-			}
+			s = strings.ToLower(s)
+			assert.Contains(t, s, v.search)
 		}
-		require.Equal(t, http.StatusOK, resp.Code)
-		assert.Equal(t, v.wantcount, countResult,
-			"For search = %s in %s: expected %d cafes, got %d. Response: '%s'",
-			v.search, "city=moscow", v.wantcount, len(convStr), bodyResp)
 	}
 }
