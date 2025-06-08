@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -75,14 +74,11 @@ func TestCafeCount(t *testing.T) {
 		req := httptest.NewRequest("GET", url, nil)
 		handler.ServeHTTP(resp, req)
 
-		assert.Equal(t, http.StatusOK, resp.Code)
+		require.Equal(t, http.StatusOK, resp.Code)
 
-		bodyResp, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatal("error reading response body: ", err)
-		}
+		bodyResp := resp.Body.String()
 
-		if bodyResp := string(bodyResp); bodyResp != "" {
+		if bodyResp != "" {
 			convStr = strings.Split(bodyResp, ",")
 		}
 
@@ -101,7 +97,6 @@ func TestCafeSearch(t *testing.T) {
 
 	var (
 		convStr []string
-		// countResult int
 	)
 
 	data := []struct {
@@ -122,15 +117,16 @@ func TestCafeSearch(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, resp.Code)
 
-		bodyResp, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatal("error reading response body: ", err)
-		}
-		clearStr := strings.TrimSpace(string(bodyResp))
+		bodyResp := strings.TrimSpace(resp.Body.String())
 
-		if clearStr != "" {
-			convStr = strings.Split(clearStr, ",")
+		if bodyResp != "" {
+			convStr = strings.Split(bodyResp, ",")
 		}
+		// clearStr := strings.TrimSpace(string(bodyResp))
+
+		// if bodyResp != "" {
+		// 	convStr = strings.Split(clearStr, ",")
+		// }
 
 		assert.Len(t, convStr, v.wantcount)
 
